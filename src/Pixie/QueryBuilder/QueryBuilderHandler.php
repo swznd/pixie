@@ -48,6 +48,8 @@ class QueryBuilderHandler
      * @var array
      */
     protected $fetchParameters = array(\PDO::FETCH_OBJ);
+    
+    use Transaction;
 
     /**
      * @param null|\Pixie\Connection $connection
@@ -802,7 +804,7 @@ class QueryBuilderHandler
 
         return $this;
     }
-
+    
     /**
      * Runs a transaction
      *
@@ -814,25 +816,20 @@ class QueryBuilderHandler
     {
         try {
             // Begin the PDO transaction
-            $this->pdo->beginTransaction();
-
-            // Get the Transaction class
-            $transaction = $this->container->build('\\Pixie\\QueryBuilder\\Transaction', array($this->connection));
+            $this->beginTransaction();
 
             // Call closure
-            $callback($transaction);
+            $callback($this->transaction);
 
             // If no errors have been thrown or the transaction wasn't completed within
             // the closure, commit the changes
-            $this->pdo->commit();
-
-            return $this;
+            $this->commit();
         } catch (TransactionHaltException $e) {
             // Commit or rollback behavior has been handled in the closure, so exit
             return $this;
         } catch (\Exception $e) {
             // something happened, rollback changes
-            $this->pdo->rollBack();
+            $this->rollback();
             return $this;
         }
     }
